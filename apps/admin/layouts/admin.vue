@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { filterNavigationForRole } from '~/common/constants/adminNavigation';
+import { useSiteBrandingState } from '~/common/controllers/useSiteBrandingState';
 import { useAuthSessionService } from '~/common/services/authSessionService';
 import { useAdminSessionStore } from '~/common/stores/adminSession';
 import AppSidebar from '~/common/widgets/AppSidebar.vue';
@@ -8,6 +9,7 @@ import AppTopBar from '~/common/widgets/AppTopBar.vue';
 
 const adminSession = useAdminSessionStore();
 const { signOut } = useAuthSessionService();
+const { logoUrl } = useSiteBrandingState();
 
 /** Mobile: sidebar slides over the page. Desktop: sidebar can be collapsed away. */
 const isSidebarOpen = ref(false);
@@ -23,12 +25,19 @@ const toggleSidebar = () => {
   }
   isSidebarOpen.value = !isSidebarOpen.value;
 };
+
+// Admin pages never appear in search results.
+useHead({
+  titleTemplate: '%s · Sreebhavan Admin',
+  meta: [{ name: 'robots', content: 'noindex, nofollow' }],
+});
 </script>
 
 <template>
   <div class="min-h-screen bg-surface">
     <AppSidebar
       :navigation-groups="navigationGroups"
+      :logo-url="logoUrl"
       :is-open="isSidebarOpen"
       :is-collapsed="isSidebarCollapsed"
       @close="isSidebarOpen = false"

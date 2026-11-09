@@ -44,7 +44,7 @@ const updateValue = (event: Event) => {
       :aria-invalid="Boolean(error)"
       :class="[
         TextStyles.input,
-        'w-full rounded-xl border bg-background px-3.5 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primaryLight disabled:bg-surface',
+        'w-full rounded-xl border bg-background px-3.5 py-2.5 outline-none transition focus:border-focus focus:ring-2 focus:ring-focusRing disabled:bg-surface',
         error ? 'border-error' : 'border-border',
       ]"
       @input="updateValue"

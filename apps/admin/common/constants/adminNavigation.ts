@@ -1,4 +1,5 @@
 import type { AppIconName } from '~/common/constants/appIcons';
+import { AppConfig } from '~/common/constants/appConfig';
 import type { AdminRole } from '~/common/types/adminSession';
 
 /** Sidebar links of the admin panel, grouped. `ownerOnly` links are hidden from staff. */
@@ -7,6 +8,8 @@ export interface AdminNavItem {
   to: string;
   icon: AppIconName;
   ownerOnly?: boolean;
+  /** Hidden until a phase turns it on. */
+  isEnabled?: boolean;
 }
 
 export interface AdminNavGroup {
@@ -18,38 +21,44 @@ export const AdminNavigation: AdminNavGroup[] = [
   {
     title: 'Overview',
     items: [
-      { label: 'Dashboard', to: '/', icon: 'dashboard' },
-      { label: 'Enquiries', to: '/enquiries', icon: 'enquiries' },
-      { label: 'Hall Calendar', to: '/hall-calendar', icon: 'calendarCheck' },
+      { label: 'Dashboard', to: '/admin', icon: 'dashboard' },
+      { label: 'Enquiries', to: '/admin/enquiries', icon: 'enquiries' },
+      { label: 'Hall Calendar', to: '/admin/hall-calendar', icon: 'calendarCheck' },
     ],
   },
   {
     title: 'Sreebhavan Veg Hotel',
-    items: [{ label: 'Menu', to: '/menu', icon: 'menu' }],
+    items: [{ label: 'Menu', to: '/admin/menu', icon: 'menu' }],
   },
   {
     title: 'Sreebhavanam',
     items: [
-      { label: 'Rooms', to: '/rooms', icon: 'rooms' },
-      { label: 'Event hall', to: '/event-hall', icon: 'calendar' },
+      { label: 'Rooms', to: '/admin/rooms', icon: 'rooms' },
+      { label: 'Event hall', to: '/admin/event-hall', icon: 'calendar' },
     ],
   },
   {
     title: 'Website content',
     items: [
-      { label: 'Banners', to: '/banners', icon: 'banners' },
-      { label: 'Gallery', to: '/gallery', icon: 'gallery' },
-      { label: 'Testimonials', to: '/testimonials', icon: 'testimonials' },
-      { label: 'FAQs', to: '/faqs', icon: 'faqs' },
-      { label: 'SEO', to: '/seo', icon: 'seo' },
+      { label: 'Special offers', to: '/admin/special-offers', icon: 'offer' },
+      { label: 'Gallery', to: '/admin/gallery', icon: 'gallery' },
+      { label: 'Testimonials', to: '/admin/testimonials', icon: 'testimonials' },
+      { label: 'FAQs', to: '/admin/faqs', icon: 'faqs' },
+      { label: 'SEO', to: '/admin/seo', icon: 'seo' },
     ],
   },
   {
     title: 'Settings',
     items: [
-      { label: 'Site settings', to: '/site-settings', icon: 'settings' },
-      { label: 'Businesses', to: '/businesses', icon: 'businesses' },
-      { label: 'Admin users', to: '/admin-users', icon: 'users', ownerOnly: true },
+      { label: 'Site settings', to: '/admin/site-settings', icon: 'settings' },
+      { label: 'Businesses', to: '/admin/businesses', icon: 'businesses' },
+      {
+        label: 'Admin users',
+        to: '/admin/admin-users',
+        icon: 'users',
+        ownerOnly: true,
+        isEnabled: AppConfig.isStaffManagementEnabled,
+      },
     ],
   },
 ];
@@ -57,5 +66,7 @@ export const AdminNavigation: AdminNavGroup[] = [
 export const filterNavigationForRole = (role: AdminRole | null): AdminNavGroup[] =>
   AdminNavigation.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.ownerOnly || role === 'owner'),
+    items: group.items.filter(
+      (item) => item.isEnabled !== false && (!item.ownerOnly || role === 'owner'),
+    ),
   })).filter((group) => group.items.length > 0);

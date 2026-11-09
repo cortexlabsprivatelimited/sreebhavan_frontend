@@ -1,36 +1,35 @@
 # Sreebhavan API Specification (FastAPI backend)
 
-**Version:** v1 · **Date:** 7 Nov 2026 · **Status:** Admin endpoints match the admin panel as built; public endpoints are planned.
+**Version:** v1 · **Updated:** 9 Nov 2026 · **Status:** Admin endpoints are built (`sreebhavan_backend`) and connected to the admin panel. Public endpoints: see `sreebhavan_backend/docs/public-api.md`.
 
 This is the contract between the FastAPI backend and the two Nuxt frontends. The admin panel (`apps/admin`) already
 calls every **admin** endpoint below with exactly these shapes. Build the backend to match, or update this document
 and `apps/admin/common/constants/apiConstants.ts` together.
 
-The admin panel can run without the backend using `npm run dev:mock`. `apps/admin/mock-api/mockApiHandler.ts` is a
-working reference implementation of every admin route in this document.
 
 ---
 
 ## 1. Conventions
 
-| Topic | Rule |
-|---|---|
-| Base path | `/api/v1`. The frontend sets the host with `NUXT_PUBLIC_API_BASE_URL`. |
-| Format | JSON, `snake_case` field names. |
-| IDs | Strings (UUID recommended). |
-| Dates | `YYYY-MM-DD` for calendar dates (`date`, `date_from`). |
-| Timestamps | ISO 8601 with timezone (`created_at`, `last_sign_in_at`). |
-| Months | `YYYY-MM` in `?month=` query params. |
-| Money | Rupees as numbers (`2200`), no paise. |
-| Images | Full public URLs built by the API. The frontend never builds Supabase URLs. |
-| Sorting | Items with a `sort` field are returned sorted by `sort` ascending (the frontend also sorts). |
-| Lists | Plain JSON arrays, **except** `GET /admin/enquiries`, which is paginated (section 6.9). |
-| Create | `POST` returns the created object with `id`. Status 200 or 201. |
-| Update | `PATCH /{id}` receives **all editable fields** (except where marked *partial*) and returns the full updated object. |
-| Delete | `DELETE /{id}` returns 200 or 204. The body is ignored. |
-| Nullable text | Empty optional text is sent as `null`. Return `null` (not `""`) for empty values. |
-| Docs | FastAPI's Swagger at `/docs` must stay enabled for development. |
-| CORS | Allow only the admin and user-site origins (plus localhost in development). |
+| Topic         | Rule                                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Base path     | `/api/v1`. The frontend sets the host with `NUXT_PUBLIC_API_BASE_URL`.                                              |
+| Format        | JSON, `snake_case` field names.                                                                                     |
+| IDs           | Strings (UUID recommended).                                                                                         |
+| Dates         | `YYYY-MM-DD` for calendar dates (`date`, `date_from`).                                                              |
+| Timestamps    | ISO 8601 with timezone (`created_at`, `last_sign_in_at`).                                                           |
+| Months        | `YYYY-MM` in `?month=` query params.                                                                                |
+| Money         | Rupees as numbers (`2200`), no paise.                                                                               |
+| Images        | Full public URLs built by the API. The frontend never builds Supabase URLs.                                         |
+| Sorting       | Items with a `sort` field are returned sorted by `sort` ascending (the frontend also sorts).                        |
+| Envelope      | Every JSON response is `{ success, status_code, message, data }`. The examples below show only `data`.              |
+| Lists         | `data` is an array, **except** `GET /admin/enquiries`, which is paginated: `data` plus `meta` (section 6.9).        |
+| Create        | `POST` returns the created object with `id`. Status 200 or 201.                                                     |
+| Update        | `PATCH /{id}` receives **all editable fields** (except where marked _partial_) and returns the full updated object. |
+| Delete        | `DELETE /{id}` returns 200 with `data: { id }`.                                                                     |
+| Nullable text | Empty optional text is sent as `null`. Return `null` (not `""`) for empty values.                                   |
+| Docs          | FastAPI's Swagger at `/docs` must stay enabled for development.                                                     |
+| CORS          | Allow only the admin and user-site origins (plus localhost in development).                                         |
 
 ## 2. Authentication
 
@@ -47,80 +46,87 @@ working reference implementation of every admin route in this document.
 Every error uses one shape:
 
 ```json
-{ "error": { "code": "slot_taken", "message": "This date and slot is already taken.", "details": null } }
+{
+  "success": false,
+  "status_code": 409,
+  "message": "This date and slot is already taken.",
+  "errors": [
+    { "field": "slot", "message": "This date and slot is already taken." }
+  ]
+}
 ```
 
-The panel shows `error.message` to the admin, so write it as a plain sentence. FastAPI's default validation body
-(`{ "detail": [{ "msg": "..." }] }`) is also handled, but the format above is preferred.
+The panel shows `message` to the admin, so write it as a plain sentence. Each `errors[].field` (snake_case, e.g.
+`image_url`, or nested like `images.0.alt`) is shown under the matching form input.
 
-| Status | When |
-|---|---|
-| 400 / 422 | Validation failed |
-| 401 | Missing, invalid or expired token; wrong password on login |
-| 403 | Staff calling an Owner-only route |
-| 404 | Record not found (and `GET /admin/hall` before the hall is set up) |
-| 409 | Conflict: hall slot taken, duplicate slug or email |
-| 429 | Rate limited (public enquiry form) |
+| Status    | When                                                               |
+| --------- | ------------------------------------------------------------------ |
+| 400 / 422 | Validation failed                                                  |
+| 401       | Missing, invalid or expired token; wrong password on login         |
+| 403       | Staff calling an Owner-only route                                  |
+| 404       | Record not found (and `GET /admin/hall` before the hall is set up) |
+| 409       | Conflict: hall slot taken, duplicate slug or email                 |
+| 429       | Rate limited (public enquiry form)                                 |
 
 ## 4. Enum values
 
-| Name | Values |
-|---|---|
-| `role` | `owner`, `staff` |
-| `slot` (hall) | `morning`, `evening`, `full` |
-| `status` (hall booking) | `booked`, `tentative` |
-| `status` (enquiry) | `new`, `contacted`, `confirmed`, `cancelled` |
-| `type` (enquiry) | `room`, `hall`, `hotel` |
-| `category` (gallery album) | `rooms`, `hall`, `past-events`, `food`, `exterior` |
-| `folder` (upload) | `logos`, `banners`, `menu/items`, `menu/cards`, `rooms`, `hall`, `gallery`, `testimonials`, `seo` |
+| Name                       | Values                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------- |
+| `role`                     | `owner`, `staff`                                                                                  |
+| `slot` (hall)              | `morning`, `evening`, `full`                                                                      |
+| `status` (hall booking)    | `booked`, `tentative`                                                                             |
+| `status` (enquiry)         | `new`, `contacted`, `confirmed`, `cancelled`                                                      |
+| `type` (enquiry)           | `room`, `hall`, `hotel`                                                                           |
+| `category` (gallery album) | `rooms`, `hall`, `past-events`, `food`, `exterior`                                                |
+| `folder` (upload)          | `logos`, `banners`, `menu/items`, `menu/cards`, `rooms`, `hall`, `gallery`, `testimonials`, `seo` |
 
 ## 5. Endpoint summary (admin)
 
-| Method | Path | Notes |
-|---|---|---|
-| POST | `/admin/auth/login` | No token |
-| POST | `/admin/auth/logout` | |
-| POST | `/admin/auth/forgot-password` | No token |
-| GET | `/admin/dashboard/stats?month=` | |
-| GET, PUT | `/admin/settings` | |
-| GET | `/admin/businesses` | |
-| PATCH | `/admin/businesses/{id}` | No create or delete |
-| GET, POST | `/admin/banners` | |
-| PATCH, DELETE | `/admin/banners/{id}` | |
-| GET, POST | `/admin/menu/categories` | |
-| PATCH, DELETE | `/admin/menu/categories/{id}` | |
-| GET, POST | `/admin/menu/items` | |
-| PATCH, DELETE | `/admin/menu/items/{id}` | PATCH can be partial |
-| GET, POST | `/admin/menu/cards` | |
-| PATCH, DELETE | `/admin/menu/cards/{id}` | |
-| GET, POST | `/admin/rooms` | |
-| PATCH, DELETE | `/admin/rooms/{id}` | |
-| POST | `/admin/rooms/{id}/images` | |
-| DELETE | `/admin/rooms/{id}/images/{image_id}` | |
-| GET, PUT | `/admin/hall` | |
-| GET, POST | `/admin/hall/packages` | |
-| PATCH, DELETE | `/admin/hall/packages/{id}` | |
-| GET, POST | `/admin/hall/images` | |
-| DELETE | `/admin/hall/images/{id}` | |
-| GET, POST | `/admin/hall/bookings` | GET takes `?month=` |
-| PATCH, DELETE | `/admin/hall/bookings/{id}` | |
-| GET | `/admin/enquiries` | Paginated, filtered |
-| PATCH | `/admin/enquiries/{id}` | Status and notes only |
-| GET | `/admin/enquiries/export.csv` | Same filters as the list |
-| GET, POST | `/admin/gallery/albums` | |
-| GET, PATCH, DELETE | `/admin/gallery/albums/{id}` | PATCH can be partial |
-| GET, POST | `/admin/gallery/images` | GET takes `?album_id=`; POST is bulk |
-| PATCH, DELETE | `/admin/gallery/images/{id}` | |
-| GET, POST | `/admin/testimonials` | |
-| PATCH, DELETE | `/admin/testimonials/{id}` | |
-| GET, POST | `/admin/faqs` | |
-| PATCH, DELETE | `/admin/faqs/{id}` | |
-| GET, POST | `/admin/seo` | |
-| PATCH, DELETE | `/admin/seo/{id}` | |
-| POST | `/admin/uploads` | multipart |
-| GET, POST | `/admin/users` | Owner only |
-| PATCH, DELETE | `/admin/users/{id}` | Owner only |
-| POST | `/admin/users/{id}/reset-password` | Owner only |
+| Method             | Path                                  | Notes                                |
+| ------------------ | ------------------------------------- | ------------------------------------ |
+| POST               | `/admin/auth/login`                   | No token                             |
+| POST               | `/admin/auth/logout`                  |                                      |
+| POST               | `/admin/auth/forgot-password`         | No token                             |
+| GET                | `/admin/dashboard/stats?month=`       |                                      |
+| GET, PUT           | `/admin/settings`                     |                                      |
+| GET                | `/admin/businesses`                   |                                      |
+| PATCH              | `/admin/businesses/{id}`              | No create or delete                  |
+| GET, POST          | `/admin/banners`                      |                                      |
+| PATCH, DELETE      | `/admin/banners/{id}`                 |                                      |
+| GET, POST          | `/admin/menu/categories`              |                                      |
+| PATCH, DELETE      | `/admin/menu/categories/{id}`         |                                      |
+| GET, POST          | `/admin/menu/items`                   |                                      |
+| PATCH, DELETE      | `/admin/menu/items/{id}`              | PATCH can be partial                 |
+| GET, POST          | `/admin/menu/cards`                   |                                      |
+| PATCH, DELETE      | `/admin/menu/cards/{id}`              |                                      |
+| GET, POST          | `/admin/rooms`                        |                                      |
+| PATCH, DELETE      | `/admin/rooms/{id}`                   |                                      |
+| POST               | `/admin/rooms/{id}/images`            |                                      |
+| DELETE             | `/admin/rooms/{id}/images/{image_id}` |                                      |
+| GET, PUT           | `/admin/hall`                         |                                      |
+| GET, POST          | `/admin/hall/packages`                |                                      |
+| PATCH, DELETE      | `/admin/hall/packages/{id}`           |                                      |
+| GET, POST          | `/admin/hall/images`                  |                                      |
+| DELETE             | `/admin/hall/images/{id}`             |                                      |
+| GET, POST          | `/admin/hall/bookings`                | GET takes `?month=`                  |
+| PATCH, DELETE      | `/admin/hall/bookings/{id}`           |                                      |
+| GET                | `/admin/enquiries`                    | Paginated, filtered                  |
+| PATCH              | `/admin/enquiries/{id}`               | Status and notes only                |
+| GET                | `/admin/enquiries/export.csv`         | Same filters as the list             |
+| GET, POST          | `/admin/gallery/albums`               |                                      |
+| GET, PATCH, DELETE | `/admin/gallery/albums/{id}`          | PATCH can be partial                 |
+| GET, POST          | `/admin/gallery/images`               | GET takes `?album_id=`; POST is bulk |
+| PATCH, DELETE      | `/admin/gallery/images/{id}`          |                                      |
+| GET, POST          | `/admin/testimonials`                 |                                      |
+| PATCH, DELETE      | `/admin/testimonials/{id}`            |                                      |
+| GET, POST          | `/admin/faqs`                         |                                      |
+| PATCH, DELETE      | `/admin/faqs/{id}`                    |                                      |
+| GET, POST          | `/admin/seo`                          |                                      |
+| PATCH, DELETE      | `/admin/seo/{id}`                     |                                      |
+| POST               | `/admin/uploads`                      | multipart                            |
+| GET, POST          | `/admin/users`                        | Owner only                           |
+| PATCH, DELETE      | `/admin/users/{id}`                   | Owner only                           |
+| POST               | `/admin/users/{id}/reset-password`    | Owner only                           |
 
 ---
 
@@ -167,12 +173,28 @@ Supabase reset email when the email belongs to an active admin.
   "enquiries_this_month": 23,
   "hall_bookings_this_month": 6,
   "upcoming_bookings": [
-    { "id": "uuid", "date": "2026-11-12", "slot": "evening", "status": "booked", "customer_name": "Arun", "event_type": "Wedding" }
+    {
+      "id": "uuid",
+      "date": "2026-11-12",
+      "slot": "evening",
+      "status": "booked",
+      "customer_name": "Arun",
+      "event_type": "Wedding"
+    }
   ],
   "recent_enquiries": [
-    { "id": "uuid", "type": "hall", "name": "Arun", "phone": "9847012345", "status": "new", "created_at": "2026-11-07T10:30:00+05:30" }
+    {
+      "id": "uuid",
+      "type": "hall",
+      "name": "Arun",
+      "phone": "9847012345",
+      "status": "new",
+      "created_at": "2026-11-07T10:30:00+05:30"
+    }
   ],
-  "month_bookings": [{ "date": "2026-11-12", "slot": "evening", "status": "booked" }]
+  "month_bookings": [
+    { "date": "2026-11-12", "slot": "evening", "status": "booked" }
+  ]
 }
 ```
 
@@ -256,7 +278,15 @@ update endpoints follow the standard pattern in section 1.
 **Category**
 
 ```json
-{ "id": "uuid", "name": "Breakfast", "name_ml": "പ്രഭാതഭക്ഷണം", "slug": "breakfast", "image_url": null, "sort": 1, "active": true }
+{
+  "id": "uuid",
+  "name": "Breakfast",
+  "name_ml": "പ്രഭാതഭക്ഷണം",
+  "slug": "breakfast",
+  "image_url": null,
+  "sort": 1,
+  "active": true
+}
 ```
 
 **Food item**
@@ -283,10 +313,16 @@ update endpoints follow the standard pattern in section 1.
 **Menu card** (PDF or image)
 
 ```json
-{ "id": "uuid", "title": "Full menu", "file_url": "https://.../menu/cards/menu.pdf", "active": true }
+{
+  "id": "uuid",
+  "title": "Full menu",
+  "file_url": "https://.../menu/cards/menu.pdf",
+  "active": true
+}
 ```
 
 Rules:
+
 - `slug` is unique per table: return `409` on a duplicate. Allowed format: `^[a-z0-9]+(-[a-z0-9]+)*$`.
 - Deleting a category that still has items returns `409` with a clear message.
 
@@ -302,7 +338,14 @@ Rules:
   "amenities": ["AC", "Wi-Fi", "TV"],
   "description": null,
   "active": true,
-  "images": [{ "id": "uuid", "url": "https://.../rooms/r1.webp", "alt": "Deluxe room with double bed", "sort": 0 }]
+  "images": [
+    {
+      "id": "uuid",
+      "url": "https://.../rooms/r1.webp",
+      "alt": "Deluxe room with double bed",
+      "sort": 0
+    }
+  ]
 }
 ```
 
@@ -329,7 +372,13 @@ empty form. **`PUT /admin/hall`** creates or replaces it and returns it.
 **Package**
 
 ```json
-{ "id": "uuid", "name": "Wedding – full day", "price": 85000, "inclusions": ["Hall for 12 hours", "Stage decoration"], "sort": 1 }
+{
+  "id": "uuid",
+  "name": "Wedding – full day",
+  "price": 85000,
+  "inclusions": ["Hall for 12 hours", "Stage decoration"],
+  "sort": 1
+}
 ```
 
 **Hall photos**: `GET /admin/hall/images` returns `[{ "id", "url", "alt", "sort" }]`. `POST` takes
@@ -362,7 +411,7 @@ empty form. **`PUT /admin/hall`** creates or replaces it and returns it.
 
 ### 6.9 Enquiries
 
-**`GET /admin/enquiries?type=hall&status=new&q=arun&page=1&page_size=20`**: all filters are optional.
+**`GET /admin/enquiries?type=hall&status=new&q=arun&page=1&per_page=20`**: all filters are optional.
 `q` searches name and phone. Newest first.
 
 ```json
@@ -387,11 +436,16 @@ empty form. **`PUT /admin/hall`** creates or replaces it and returns it.
       "created_at": "2026-11-07T10:30:00+05:30"
     }
   ],
-  "total": 37,
-  "page": 1,
-  "page_size": 20
+  "meta": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_records": 37,
+    "total_pages": 2
+  }
 }
 ```
+
+(The response shows the envelope's `data` and `meta`; `success`, `status_code` and `message` are left out.)
 
 `room_name` is joined from `rooms` for room enquiries.
 
@@ -446,7 +500,15 @@ The panel saves it as `enquiries-YYYY-MM-DD.csv`.
 ```json
 {
   "album_id": "uuid",
-  "images": [{ "url": "...", "thumb_url": "...", "alt": "Required alt text", "caption": null, "sort": 3 }]
+  "images": [
+    {
+      "url": "...",
+      "thumb_url": "...",
+      "alt": "Required alt text",
+      "caption": null,
+      "sort": 3
+    }
+  ]
 }
 ```
 
@@ -457,7 +519,15 @@ The panel saves it as `enquiries-YYYY-MM-DD.csv`.
 ### 6.11 Testimonials
 
 ```json
-{ "id": "uuid", "name": "Lakshmi", "text": "Best masala dosa in town.", "rating": 5, "business_id": "uuid", "sort": 1, "active": true }
+{
+  "id": "uuid",
+  "name": "Lakshmi",
+  "text": "Best masala dosa in town.",
+  "rating": 5,
+  "business_id": "uuid",
+  "sort": 1,
+  "active": true
+}
 ```
 
 `rating` is 1–5. `business_id` may be `null` (both businesses).
@@ -465,7 +535,13 @@ The panel saves it as `enquiries-YYYY-MM-DD.csv`.
 ### 6.12 FAQs
 
 ```json
-{ "id": "uuid", "business_id": null, "question": "How many guests does the hall seat?", "answer": "600 seated.", "sort": 1 }
+{
+  "id": "uuid",
+  "business_id": null,
+  "question": "How many guests does the hall seat?",
+  "answer": "600 seated.",
+  "sort": 1
+}
 ```
 
 `business_id: null` means a general FAQ.
@@ -494,7 +570,10 @@ The panel saves it as `enquiries-YYYY-MM-DD.csv`.
 **`POST /admin/uploads`**: `multipart/form-data` with fields `file` and `folder` (a value from the `folder` enum).
 
 ```json
-{ "url": "https://<project>.supabase.co/storage/v1/object/public/rooms/abc.webp", "thumb_url": "https://.../abc_thumb.webp" }
+{
+  "url": "https://<project>.supabase.co/storage/v1/object/public/rooms/abc.webp",
+  "thumb_url": "https://.../abc_thumb.webp"
+}
 ```
 
 - Images (`jpeg`, `png`, `webp`): resize to a sensible maximum width, convert to WebP, make a thumbnail, and return both URLs.
@@ -507,7 +586,14 @@ The panel saves it as `enquiries-YYYY-MM-DD.csv`.
 ### 6.15 Admin users (Owner only)
 
 ```json
-{ "id": "uuid", "name": "Front Desk", "email": "staff@example.com", "role": "staff", "active": true, "last_sign_in_at": null }
+{
+  "id": "uuid",
+  "name": "Front Desk",
+  "email": "staff@example.com",
+  "role": "staff",
+  "active": true,
+  "last_sign_in_at": null
+}
 ```
 
 - **`POST /admin/users`**: `{ name, email, role, active }`. Invite through Supabase Auth (`invite_user_by_email`);
@@ -526,24 +612,25 @@ The panel saves it as `enquiries-YYYY-MM-DD.csv`.
 These come from the project plan and will be used by `apps/web`, which is not built yet. Shapes will be fixed when
 that work starts. They need no token, are read-only (except the enquiry form) and should be cached.
 
-| Method | Path | Notes |
-|---|---|---|
-| GET | `/public/settings` | Same keys as admin settings, minus anything private |
-| GET | `/public/businesses/{slug}` | |
-| GET | `/public/banners` | Active only |
-| GET | `/public/menu/categories` | Active only |
-| GET | `/public/menu/items?category=&special=` | Available items |
-| GET | `/public/menu/cards` | Active only |
-| GET | `/public/rooms`, `/public/rooms/{slug}` | Active only, with images |
-| GET | `/public/hall`, `/public/hall/packages` | |
-| GET | `/public/hall/availability?month=YYYY-MM` | `[{ date, slot, status }]` only. **Never** expose customer name, phone or notes. |
-| GET | `/public/gallery/albums`, `/public/gallery/albums/{slug}` | Active only |
-| GET | `/public/testimonials`, `/public/faqs` | |
-| GET | `/public/seo/{page_key}` | |
-| GET | `/public/sitemap-data` | Slugs and `updated_at` for rooms, menu categories and albums |
-| POST | `/public/enquiries` | Saves the enquiry, returns `{ "id", "whatsapp_url" }` |
+| Method | Path                                                      | Notes                                                                            |
+| ------ | --------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| GET    | `/public/settings`                                        | Same keys as admin settings, minus anything private                              |
+| GET    | `/public/businesses/{slug}`                               |                                                                                  |
+| GET    | `/public/banners`                                         | Active only                                                                      |
+| GET    | `/public/menu/categories`                                 | Active only                                                                      |
+| GET    | `/public/menu/items?category=&special=`                   | Available items                                                                  |
+| GET    | `/public/menu/cards`                                      | Active only                                                                      |
+| GET    | `/public/rooms`, `/public/rooms/{slug}`                   | Active only, with images                                                         |
+| GET    | `/public/hall`, `/public/hall/packages`                   |                                                                                  |
+| GET    | `/public/hall/availability?month=YYYY-MM`                 | `[{ date, slot, status }]` only. **Never** expose customer name, phone or notes. |
+| GET    | `/public/gallery/albums`, `/public/gallery/albums/{slug}` | Active only                                                                      |
+| GET    | `/public/testimonials`, `/public/faqs`                    |                                                                                  |
+| GET    | `/public/seo/{page_key}`                                  |                                                                                  |
+| GET    | `/public/sitemap-data`                                    | Slugs and `updated_at` for rooms, menu categories and albums                     |
+| POST   | `/public/enquiries`                                       | Saves the enquiry, returns `{ "id", "whatsapp_url" }`                            |
 
 `POST /public/enquiries` must:
+
 1. Validate the input (Pydantic) and check a honeypot field or Cloudflare Turnstile token.
 2. Apply rate limiting per IP (return `429`).
 3. Save the enquiry with status `new` **before** returning.

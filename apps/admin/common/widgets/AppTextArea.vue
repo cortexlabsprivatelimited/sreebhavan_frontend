@@ -31,7 +31,7 @@ const inputId = useId();
       :aria-invalid="Boolean(error)"
       :class="[
         TextStyles.input,
-        'w-full rounded-xl border bg-background px-3.5 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primaryLight',
+        'w-full rounded-xl border bg-background px-3.5 py-2.5 outline-none transition focus:border-focus focus:ring-2 focus:ring-focusRing',
         error ? 'border-error' : 'border-border',
       ]"
       @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"

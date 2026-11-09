@@ -65,10 +65,18 @@ apps/<web|admin>/
 
 ### Feature modules
 
-| App | Feature folders |
-|---|---|
-| apps/web | home, hotel, menu, rooms, eventHall, gallery, about, contact, enquiry |
-| apps/admin | login, dashboard, siteSettings, businesses, banners, menu, rooms, eventHall, hallCalendar, enquiries, gallery, testimonials, faqs, seo, adminUsers |
+The user site and the admin panel currently live in **one** app (`apps/admin`), split by folder and route:
+
+| Site | Folder | Routes | Feature folders |
+|---|---|---|---|
+| User site | `features/userSite/` | everything outside `/admin` (SSR, no login) | home, hotel, menu, sreebhavanam, rooms, eventHall, gallery, about, contact, faq, enquiry |
+| Admin panel | `features/adminSite/` | `pages/admin/**` → `/admin/**` (SPA, login) | login, dashboard, siteSettings, businesses, specialOffers, menu, rooms, eventHall, hallCalendar, enquiries, gallery, testimonials, faqs, seo, adminUsers |
+
+- A user site feature never imports an admin feature, and the reverse. Both may use `common/`.
+- User-site-only shared widgets go in `common/widgets/userSite/` (`AppSite*` prefix); user site routes are in
+  `common/constants/userSiteNavigation.ts` (`SiteRoutes`), admin routes in `adminNavigation.ts`.
+- `layouts/default.vue` is the user site layout and sets `.theme-user-site`; admin pages set `layout: 'admin'` or `'auth'`.
+- `middleware/adminAuth.global.ts` only guards `/admin/**`.
 
 Add a new feature folder only for a new screen area. Don't make a folder for one widget.
 
@@ -90,7 +98,8 @@ export default defineNuxtConfig({
 });
 ```
 
-`apps/web` adds `@nuxtjs/seo`. `apps/admin` sets `ssr: false` and `robots: noindex` on every route.
+SSR is on for the user site. `routeRules` set `ssr: false` and `X-Robots-Tag: noindex` on `/admin/**`, and the admin
+layouts add a `robots: noindex` meta tag.
 
 ## 2. What each layer does
 
@@ -140,7 +149,9 @@ Names must say what the thing is or does. No `data`, `temp`, `test2`, `newFile`,
 
 ## 4. Colors: `common/constants/appColors.ts`
 
-- Every color code is a string in `AppColors`. No other file writes a hex, rgb or named color.
+- Every color code is a string in `AppColors` (admin theme) or `UserSiteThemeColors` (user site overrides of the
+  same keys). No other file writes a hex, rgb or named color. `tailwind.config.ts` maps hex colors to CSS variables so
+  the `.theme-user-site` class can swap them.
 - `tailwind.config.ts` reads `AppColors`, so components use classes like `bg-primary`, `text-textSecondary`, `border-border`.
 - To change a brand color, edit `AppColors` only.
 - Hall calendar status colors (booked, tentative, available) also live here.
@@ -220,13 +231,14 @@ await apiClient.get(ApiConstants.public.rooms);
 - No `console.log` in committed code.
 - ESLint (`@nuxt/eslint`) and Prettier must pass before a commit.
 
-## 11. SEO rules (apps/web only)
+## 11. SEO rules (user site only)
 
-- Every page file calls `useSeoMeta`, using values from the API (`ApiConstants.public.seoByPage(pageKey)`) with a fallback title and description.
+- Every page file calls `useSeoMeta(usePageSeo(pageKey, fallback))` (`common/controllers/usePageSeo.ts`), which reads
+  `ApiConstants.public.seoByPage(pageKey)` and falls back to the page's own title and description.
 - One `<h1>` per page, using `TextStyles.heading` or `TextStyles.displayTitle`.
 - Every `<NuxtImg>` has meaningful alt text.
 - Data for SEO pages is loaded with `useAsyncData` in the controller, so it is in the server-rendered HTML.
-- Structured data (`useSchemaOrg`) is added in the page file, not inside widgets.
+- Structured data (JSON-LD through `useHead`, see `pages/index.vue` and `pages/faq.vue`) is added in the page file, not inside widgets.
 
 ## 12. Checklist before finishing a change
 
@@ -356,7 +368,7 @@ export const ApiConstants = {
   public: {
     settings: '/public/settings',
     businessBySlug: (slug: string) => `/public/businesses/${slug}`,
-    banners: '/public/banners',
+    specialOffers: '/public/banners', // backend still calls special offers "banners"
 
     menuCategories: '/public/menu/categories',
     menuItems: '/public/menu/items',
@@ -384,8 +396,8 @@ export const ApiConstants = {
     settings: '/admin/settings',
     businesses: '/admin/businesses',
     businessById: (id: string) => `/admin/businesses/${id}`,
-    banners: '/admin/banners',
-    bannerById: (id: string) => `/admin/banners/${id}`,
+    specialOffers: '/admin/banners',
+    specialOfferById: (id: string) => `/admin/banners/${id}`,
 
     menuCategories: '/admin/menu/categories',
     menuCategoryById: (id: string) => `/admin/menu/categories/${id}`,

@@ -8,7 +8,8 @@ export const ApiConstants = {
   public: {
     settings: '/public/settings',
     businessBySlug: (slug: string) => `/public/businesses/${slug}`,
-    banners: '/public/banners',
+    /** Special offers. The backend still names these "banners". */
+    specialOffers: '/public/banners',
 
     menuCategories: '/public/menu/categories',
     menuItems: '/public/menu/items',
@@ -43,8 +44,9 @@ export const ApiConstants = {
     settings: '/admin/settings',
     businesses: '/admin/businesses',
     businessById: (id: string) => `/admin/businesses/${id}`,
-    banners: '/admin/banners',
-    bannerById: (id: string) => `/admin/banners/${id}`,
+    /** Special offers. The backend still names these "banners". */
+    specialOffers: '/admin/banners',
+    specialOfferById: (id: string) => `/admin/banners/${id}`,
 
     menuCategories: '/admin/menu/categories',
     menuCategoryById: (id: string) => `/admin/menu/categories/${id}`,

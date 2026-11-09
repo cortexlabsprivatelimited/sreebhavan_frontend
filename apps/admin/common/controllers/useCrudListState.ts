@@ -2,7 +2,7 @@ import type { Ref } from 'vue';
 import { AppStrings } from '~/common/constants/appStrings';
 import { useToastStore } from '~/common/stores/toast';
 import { hasFormErrors, type FormErrors } from '~/common/types/form';
-import { getErrorMessage } from '~/common/utils/getErrorMessage';
+import { getApiFieldErrors, getErrorMessage } from '~/common/utils/getErrorMessage';
 
 /** What a feature repository must offer to use the shared list + form + delete flow. */
 export interface CrudRepository<TItem extends { id: string }, TForm> {
@@ -19,6 +19,8 @@ interface CrudListOptions<TItem extends { id: string }, TForm> {
   createEmptyForm: () => TForm;
   toForm: (item: TItem) => TForm;
   validateForm: (form: TForm) => FormErrors<TForm>;
+  /** API field names that differ from the form's, e.g. `{ price: 'pricePerNight' }`. */
+  apiFieldNames?: Record<string, string>;
 }
 
 /**
@@ -88,6 +90,7 @@ export const useCrudListState = <TItem extends { id: string }, TForm>(
       toast.showSuccess(AppStrings.states.saved);
       await reloadItems();
     } catch (saveError) {
+      formErrors.value = getApiFieldErrors(saveError, form.value, options.apiFieldNames);
       saveErrorMessage.value = getErrorMessage(saveError);
     } finally {
       isSaving.value = false;

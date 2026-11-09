@@ -2,6 +2,8 @@
  * All color codes for the app. The only file allowed to contain color values.
  * tailwind.config.ts reads this object, so use classes like `bg-primary`, `text-textSecondary`.
  * Admin theme: dark royal blue sidebar, blue primary, white cards on a light blue-grey page.
+ * User site theme: `UserSiteThemeColors` replaces the brand keys inside `.theme-user-site`
+ * (set by layouts/default.vue), so shared widgets like AppButton turn leaf green and temple gold there.
  */
 export const AppColors = {
   // Brand
@@ -53,8 +55,53 @@ export const AppColors = {
   tentative: '#F59E0B',
   available: '#22C55E',
 
+  // Accent and focus (focus colors differ per theme: blue in the admin, gold on the user site)
+  tertiary: '#B34A28',
+  tertiaryLight: '#FBE9E2',
+  focus: '#2563EB',
+  focusRing: '#EAF1FE',
+
   // Third-party
   whatsapp: '#25D366',
+
+  // User site only (DESIGN.md: luxury heritage hospitality)
+  siteFooter: '#071D3F', // deep sapphire night
+  siteHeroShade: 'rgba(7, 29, 63, 0.62)', // over photos with light text
+  siteHeroWash: 'rgba(249, 247, 242, 0.86)', // ivory wash over photos with dark text
+  siteGlass: 'rgba(255, 255, 255, 0.85)',
+  siteGlassStrong: 'rgba(255, 255, 255, 0.94)',
+  siteHairline: 'rgba(12, 59, 122, 0.08)',
+  siteHairlineStrong: 'rgba(12, 59, 122, 0.15)',
+  siteHairlineGold: 'rgba(200, 149, 82, 0.28)',
+  siteShadow: 'rgba(12, 59, 122, 0.06)',
+  siteShadowNeutral: 'rgba(0, 0, 0, 0.02)',
+  siteShadowFloat: 'rgba(12, 59, 122, 0.10)',
+  siteGlow: 'rgba(12, 59, 122, 0.25)',
 } as const;
 
-export type AppColorName = keyof typeof AppColors;
+/**
+ * Brand colors of the public user site (DESIGN.md): royal sapphire, sand gold, Kerala terracotta
+ * on a warm ivory canvas. Same keys as AppColors; applied under `.theme-user-site`.
+ */
+export const UserSiteThemeColors = {
+  primary: '#0C3B7A', // royal sapphire
+  primaryDark: '#002556',
+  primaryLight: '#E9EEF7',
+  secondary: '#C89552', // sand gold / polished brass
+  secondaryDark: '#805618',
+  secondaryLight: '#FBF1E3',
+  tertiary: '#B34A28', // Kerala terracotta
+  tertiaryLight: '#FBE9E2',
+  textPrimary: '#121C2B', // ink
+  textSecondary: '#5C6878', // stone
+  textMuted: '#8A94A3',
+  surface: '#F9F7F2', // warm ivory canvas
+  surfaceMuted: '#F2EFE7',
+  border: '#E6E3DB',
+  info: '#0C3B7A',
+  infoLight: '#E9EEF7',
+  success: '#2F7D4F',
+  successLight: '#E5F2EA',
+  focus: '#C89552',
+  focusRing: '#F6E7D2',
+} as const satisfies Partial<Record<keyof typeof AppColors, string>>;

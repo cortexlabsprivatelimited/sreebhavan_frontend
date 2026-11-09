@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { TextStyles } from '~/common/styles/textStyles';
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'dangerGhost';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'dangerGhost' | 'onDark';
 
 const props = withDefaults(
   defineProps<{
@@ -23,6 +23,8 @@ const variantClasses: Record<ButtonVariant, string> = {
   danger: 'bg-error text-textOnPrimary hover:opacity-90',
   ghost: 'text-primary hover:bg-primaryLight',
   dangerGhost: 'text-error hover:bg-errorLight',
+  /** Outline button on a dark or photo background (user site heroes). */
+  onDark: 'border border-textOnPrimary/40 text-textOnPrimary hover:bg-textOnPrimary/10',
 };
 
 const buttonClasses = computed(() => [

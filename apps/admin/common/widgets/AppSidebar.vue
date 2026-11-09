@@ -1,14 +1,22 @@
 <script setup lang="ts">
+import { AppConfig } from '~/common/constants/appConfig';
 import { AppStrings } from '~/common/constants/appStrings';
 import type { AdminNavGroup } from '~/common/constants/adminNavigation';
 import { TextStyles } from '~/common/styles/textStyles';
 import AppIcon from '~/common/widgets/AppIcon.vue';
 
-defineProps<{ navigationGroups: AdminNavGroup[]; isOpen: boolean; isCollapsed: boolean }>();
+/** `logoUrl`: the brand logo from Site settings; the lotus icon is shown until one is set. */
+defineProps<{
+  navigationGroups: AdminNavGroup[];
+  logoUrl: string | null;
+  isOpen: boolean;
+  isCollapsed: boolean;
+}>();
 const emit = defineEmits<{ close: [] }>();
 
 const route = useRoute();
-const isActiveLink = (to: string) => (to === '/' ? route.path === '/' : route.path.startsWith(to));
+const isActiveLink = (to: string) =>
+  to === AppConfig.homeRoute ? route.path === to : route.path.startsWith(to);
 </script>
 
 <template>
@@ -31,8 +39,18 @@ const isActiveLink = (to: string) => (to === '/' ? route.path === '/' : route.pa
       :stroke-width="1"
       class="pointer-events-none absolute -bottom-8 -left-6 h-44 w-44 text-primary/40"
     />
-    <NuxtLink to="/" class="flex flex-col items-center gap-2 px-6 pb-4 pt-7" @click="emit('close')">
-      <AppIcon name="lotus" :stroke-width="1.5" class="h-12 w-12 text-sidebarAccent" />
+    <NuxtLink
+      :to="AppConfig.homeRoute"
+      class="flex flex-col items-center gap-2 px-6 pb-4 pt-7"
+      @click="emit('close')"
+    >
+      <NuxtImg
+        v-if="logoUrl"
+        :src="logoUrl"
+        :alt="AppStrings.appName"
+        class="h-14 w-14 rounded-full bg-background object-contain p-1"
+      />
+      <AppIcon v-else name="lotus" :stroke-width="1.5" class="h-12 w-12 text-sidebarAccent" />
       <span :class="TextStyles.brandTitle">{{ AppStrings.appName }}</span>
     </NuxtLink>
     <nav class="relative flex-1 overflow-y-auto px-3 pb-24">

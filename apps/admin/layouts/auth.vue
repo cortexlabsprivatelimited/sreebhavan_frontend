@@ -1,6 +1,15 @@
 <script setup lang="ts">
+import { useSiteBrandingState } from '~/common/controllers/useSiteBrandingState';
 import AppIcon from '~/common/widgets/AppIcon.vue';
 import AppToastList from '~/common/widgets/AppToastList.vue';
+
+useSiteBrandingState();
+
+// Admin pages never appear in search results.
+useHead({
+  titleTemplate: '%s · Sreebhavan Admin',
+  meta: [{ name: 'robots', content: 'noindex, nofollow' }],
+});
 </script>
 
 <template>
